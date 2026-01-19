@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click Rápido</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        .header {
+            width: 100%;
+            padding: 20px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 10px;
+            font-size: 18px;
+        }
+
+        .lives {
+            color: #ff6b6b;
+        }
+
+        .score {
+            color: #4ecdc4;
+        }
+
+        .game-area {
+            width: 800px;
+            height: 500px;
+            background-color: white;
+            margin-top: 20px;
+            position: relative;
+            border: 3px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .red-box {
+            width: 80px;
+            height: 80px;
+            background-image: url('target.png');
+            background-size: cover;
+            background-position: center;
+            position: absolute;
+            cursor: pointer;
+            border-radius: 50%;
+            display: none;
+            transition: transform 0.1s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .red-box:hover {
+            transform: scale(1.1);
+        }
+
+        .red-box:active {
+            transform: scale(0.95);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .game-over h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .game-over p {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .restart-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .restart-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .start-screen h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .start-screen p {
+            font-size: 18px;
+            margin-bottom: 10px;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .start-btn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .start-btn:hover {
+            background-color: #1e8449;
+        }
+
+        .time-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 5px;
+            background-color: #e74c3c;
+            transition: width linear;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Click Rápido</h1>
+        <div class="stats">
+            <span class="lives">Vidas: <span id="lives">3</span> ❤️</span>
+            <span class="score">Puntuación: <span id="score">0</span></span>
+            <span>Tiempo: <span id="time">2.0</span>s</span>
+        </div>
+    </div>
+
+    <div class="game-area" id="gameArea">
+        <div class="red-box" id="redBox"></div>
+        <div class="time-bar" id="timeBar"></div>
+
+        <div class="start-screen" id="startScreen">
+            <h2>Click Rápido</h2>
+            <p>Haz click en el cuadro rojo antes de que desaparezca.</p>
+            <p>Si no le das click, pierdes una vida.</p>
+            <p>El tiempo se reduce con cada acierto.</p>
+            <button class="start-btn" id="startBtn">Comenzar</button>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>¡Game Over!</h2>
+            <p>Puntuación final: <span id="finalScore">0</span></p>
+            <button class="restart-btn" id="restartBtn">Volver a empezar</button>
+        </div>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('gameArea');
+        const redBox = document.getElementById('redBox');
+        const livesDisplay = document.getElementById('lives');
+        const scoreDisplay = document.getElementById('score');
+        const timeDisplay = document.getElementById('time');
+        const gameOverScreen = document.getElementById('gameOver');
+        const startScreen = document.getElementById('startScreen');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+        const startBtn = document.getElementById('startBtn');
+        const timeBar = document.getElementById('timeBar');
+
+        let lives = 3;
+        let score = 0;
+        let currentTime = 2000; // milisegundos
+        let boxTimeout = null;
+        let isGameRunning = false;
+        let boxClicked = false;
+
+        function getRandomPosition() {
+            const areaWidth = gameArea.clientWidth - 80;
+            const areaHeight = gameArea.clientHeight - 80;
+
+            const x = Math.floor(Math.random() * areaWidth);
+            const y = Math.floor(Math.random() * areaHeight);
+
+            return { x, y };
+        }
+
+        function showBox() {
+            if (!isGameRunning) return;
+
+            boxClicked = false;
+            const position = getRandomPosition();
+
+            redBox.style.left = position.x + 'px';
+            redBox.style.top = position.y + 'px';
+            redBox.style.display = 'block';
+
+            // Animación de la barra de tiempo
+            timeBar.style.transition = 'none';
+            timeBar.style.width = '100%';
+            setTimeout(() => {
+                timeBar.style.transition = `width ${currentTime}ms linear`;
+                timeBar.style.width = '0%';
+            }, 10);
+
+            boxTimeout = setTimeout(() => {
+                if (!boxClicked && isGameRunning) {
+                    hideBox();
+                    loseLife();
+                }
+            }, currentTime);
+        }
+
+        function hideBox() {
+            redBox.style.display = 'none';
+        }
+
+        function loseLife() {
+            lives--;
+            livesDisplay.textContent = lives;
+
+            if (lives <= 0) {
+                endGame();
+            } else {
+                setTimeout(showBox, 1000);
+            }
+        }
+
+        function handleBoxClick() {
+            if (!isGameRunning || boxClicked) return;
+
+            boxClicked = true;
+            clearTimeout(boxTimeout);
+            hideBox();
+
+            score++;
+            scoreDisplay.textContent = score;
+
+            // Reducir el tiempo (mínimo 300ms)
+            currentTime = Math.max(300, currentTime - 50);
+            timeDisplay.textContent = (currentTime / 1000).toFixed(1);
+
+            setTimeout(showBox, 500);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            hideBox();
+            clearTimeout(boxTimeout);
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.style.display = 'flex';
+            timeBar.style.width = '0%';
+        }
+
+        function startGame() {
+            lives = 3;
+            score = 0;
+            currentTime = 2000;
+            isGameRunning = true;
+
+            livesDisplay.textContent = lives;
+            scoreDisplay.textContent = score;
+            timeDisplay.textContent = (currentTime / 1000).toFixed(1);
+
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            setTimeout(showBox, 1000);
+        }
+
+        redBox.addEventListener('click', handleBoxClick);
+        restartBtn.addEventListener('click', startGame);
+        startBtn.addEventListener('click', startGame);
+    </script>
+</body>
+</html>

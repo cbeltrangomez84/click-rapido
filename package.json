@@ -1,0 +1,11 @@
+{
+  "name": "click-rapido",
+  "version": "1.0.0",
+  "description": "Juego de click rapido",
+  "scripts": {
+    "start": "serve -s . -l $PORT"
+  },
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}
